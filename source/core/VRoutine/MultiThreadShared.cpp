@@ -121,7 +121,7 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 			
 			return;
 		}
-		//½« m_preemptFlag ¸´Î»ºó£¬ÈôÎÞÐÂtask ¾ÍÍË³ö¡¢·´Ö®½øÐÐÇÀÕ¼Ê½µ÷¶È
+		//å°† m_preemptFlag å¤ä½åŽï¼Œè‹¥æ— æ–°task å°±é€€å‡ºã€åä¹‹è¿›è¡ŒæŠ¢å å¼è°ƒåº¦
 		m_preemptFlag.store(false);
 		const Task* head = NULL;
 		m_taskQueue->front([&](const Task* item){

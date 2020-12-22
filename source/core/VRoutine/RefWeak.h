@@ -31,7 +31,7 @@ namespace VictorRoutine
 	private:
 		int addRef();
 		int unRef();
-		//需要对返回的RefObject执行unRef
+		//闇�瑕佸杩斿洖鐨凴efObject鎵цunRef
 		RefObject* getRefObject();
 	private:
 		std::atomic<RefObject*>	m_refStrong;

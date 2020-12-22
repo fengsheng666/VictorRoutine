@@ -31,8 +31,8 @@ namespace VictorRoutine
 	public:
 		Routine(std::function<void()> func);
 		~Routine();
-		Routine& addDependence(MultiThreadShared* obj, bool bExclusive);
-		//×îºÃ´«µÝÒ»¸ö·Ç¿ÕµÄdispatcher£¬·ÀÖ¹Õ»Òç³ö
+		Routine& addDependence(MultiThreadShared* obj, bool bExclusive = true);
+		//å»ºè®®ä¼ é€’ä¸€ä¸ªæœ‰æ•ˆçš„dispatcherï¼Œé˜²æ­¢æ ˆæº¢å‡º
 		void go(Dispatcher* dispatcher = 0);
 
 	private:

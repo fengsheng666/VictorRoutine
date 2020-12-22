@@ -36,13 +36,13 @@ void AtomicQueueBase::append(AtomicQueueItem* begin, AtomicQueueItem* end, int l
 	{
 		m_size.fetch_sub(length);
 	}
-	//<<<insert£ºÔÚ´Ë²åÈë¡°¹Ø±Õ¡±ÖÐ¶Ï»úÖÆ
+	//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œå…³é—­â€ä¸­æ–­æœºåˆ¶
 	AtomicQueueItem* old = m_tail.exchange(end);
 	if (0 == old)
 	{
-		//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 		AtomicQueueItem* head = m_head.load();
-		//ÕýÔÚpop×îºóÒ»¸öÔªËØ£¬µÈ´ýpopÍê³É
+		//æ­£åœ¨popæœ€åŽä¸€ä¸ªå…ƒç´ ï¼Œç­‰å¾…popå®Œæˆ
 		while (head != NULL)
 		{
 			head = m_head.load();
@@ -53,13 +53,13 @@ void AtomicQueueBase::append(AtomicQueueItem* begin, AtomicQueueItem* end, int l
 	{
 		assert(old->getNext() == NULL);
 		old->setNext(begin);
-		//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 	}
 }
 
 AtomicQueueBase::AtomicQueueItem* AtomicQueueBase::pop(std::function<bool(AtomicQueueItem*)> filterFunc)
 {
-	// if m_head != INVALID_PTR ÇÒ m_head != NULL set m_head=INVALID_PTR
+	// if m_head != INVALID_PTR ä¸” m_head != NULL set m_head=INVALID_PTR
 	AtomicQueueItem* head = m_head.load();
 	for (; true; head = m_head.load())
 	{
@@ -76,27 +76,27 @@ AtomicQueueBase::AtomicQueueItem* AtomicQueueBase::pop(std::function<bool(Atomic
 			return NULL;
 		}
 		AtomicQueueItem* expected = head;
-		//<<<insert£ºÔÚ´Ë²åÈë¡°¹Ø±Õ¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œå…³é—­â€ä¸­æ–­æœºåˆ¶
 		if (m_head.compare_exchange_weak(expected, INVALID_PTR))
 		{
 			break;
 		}
-		//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 	}
-	//m_tail == head Îª×îºóÒ»¸öÔªËØ£¬Ôò set m_tail=NULL
+	//m_tail == head ä¸ºæœ€åŽä¸€ä¸ªå…ƒç´ ï¼Œåˆ™ set m_tail=NULL
 	AtomicQueueItem* expected = head;
 	if (m_tail.compare_exchange_strong(expected, NULL))
 	{
 		m_head.store(NULL);
-		//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 		m_size.fetch_sub(1);
 		assert(head->getNext() == NULL);
 		return head;
 	}
-	//µÈ´ýappend½«begin½ÓÈë
+	//ç­‰å¾…appendå°†beginæŽ¥å…¥
 	while (!head->getNext()){};
 	m_head.store(head->getNext());
-	//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+	//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 	m_size.fetch_sub(1);
 	head->setNext(NULL);
 	return head;
@@ -116,14 +116,14 @@ void AtomicQueueBase::front(std::function<void(const AtomicQueueItem*)> recver)
 			continue;
 		}
 		AtomicQueueItem* expected = head;
-		//<<<insert£ºÔÚ´Ë²åÈë¡°¹Ø±Õ¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œå…³é—­â€ä¸­æ–­æœºåˆ¶
 		if (m_head.compare_exchange_weak(expected, INVALID_PTR))
 		{
 			break;
 		}
-		//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 	}
 	recver(head);
 	m_head.store(head);
-	//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+	//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 }

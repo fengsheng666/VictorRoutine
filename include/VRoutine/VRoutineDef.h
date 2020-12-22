@@ -17,7 +17,7 @@
 
 #include "../VictorDef/VictorDef.h"
 
-///єк¶ЁТе
+///е®Џе®љд№‰
 #ifdef VROUTINE_LIB
 #define VROUTINE_API VICTOR_EXPORT
 #else

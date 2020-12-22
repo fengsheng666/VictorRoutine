@@ -32,8 +32,8 @@ namespace VictorRoutine
 	protected:
 		MultiThreadShared();
 	private:
-		//先将task插入无锁队列，再置位
-		//返回 false 就绪成功但执行延期，true 就绪成功且可立即执行
+		//鍏堝皢task鎻掑叆鏃犻攣闃熷垪锛屽啀缃綅
+		//杩斿洖 false 灏辩华鎴愬姛浣嗘墽琛屽欢鏈燂紝true 灏辩华鎴愬姛涓斿彲绔嬪嵆鎵ц
 		bool preempt(Task* task);
 		void release(Dispatcher* dispatcher);
 	private:

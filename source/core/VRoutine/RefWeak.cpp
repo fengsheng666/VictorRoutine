@@ -48,14 +48,14 @@ RefObject* RefWeak::getRefObject()
 			continue;
 		}
 		RefObject* expected = oldStrong;
-		//<<<insert£ºÔÚ´Ë²åÈë¡°¹Ø±Õ¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œå…³é—­â€ä¸­æ–­æœºåˆ¶
 		//if m_refStrong==oldStrong set m_refStrong=INVALID_PTR
 		if (m_refStrong.compare_exchange_weak(expected, INVALID_PTR))
 		{
 			assert(expected == oldStrong);
 			break;
 		}
-		//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+		//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 	}
 
 	// if oldStrong->m_refCount != 0 set oldStrong->m_refCount++
@@ -65,11 +65,11 @@ RefObject* RefWeak::getRefObject()
 		if (strongRefCount == 0)
 		{
 			m_refStrong.store(oldStrong);
-			//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+			//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 			return 0;
 		}
 		int expected = strongRefCount;
-		//if oldStrong->m_refCount==strongRefCount set oldStrong->m_refCount++ ¼´²»ÎªÁãÔò++
+		//if oldStrong->m_refCount==strongRefCount set oldStrong->m_refCount++ å³ä¸ä¸ºé›¶åˆ™++
 		if (oldStrong->m_refCount.compare_exchange_weak(expected, strongRefCount + 1))
 		{
 			assert(expected == strongRefCount);
@@ -78,6 +78,6 @@ RefObject* RefWeak::getRefObject()
 	}
 
 	m_refStrong.store(oldStrong);
-	//<<<insert£ºÔÚ´Ë²åÈë¡°»Ö¸´¡±ÖÐ¶Ï»úÖÆ
+	//<<<insertï¼šåœ¨æ­¤æ’å…¥â€œæ¢å¤â€ä¸­æ–­æœºåˆ¶
 	return oldStrong;
 }

@@ -19,7 +19,7 @@
 
 namespace VictorRoutine
 {
-	// T Îª RefObjectµÄ×ÓÀà£¬¶ø·ÇRefWeakµÄ×ÓÀà
+	// T ä¸º RefObjectçš„å­ç±»ï¼Œè€ŒéRefWeakçš„å­ç±»
 	template<class T>
 	class StrongPtr : public StrongPtrBase
 	{
