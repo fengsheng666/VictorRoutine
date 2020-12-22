@@ -1,0 +1,54 @@
+# 设置模块名称
+SET(MODULE_NAME	VRoutine)
+# 定义宏VROUTINE_LIB
+ADD_DEFINITIONS(-DVROUTINE_LIB)
+
+# 将导出头文件归组
+FILE(GLOB ROOT_HEADERS 
+	${PROJECT_SOURCE_DIR}/include/${MODULE_NAME}/*.hpp 
+	${PROJECT_SOURCE_DIR}/include/${MODULE_NAME}/*.h
+)
+source_group(Include FILES ${ROOT_HEADERS})
+FILE(GLOB INNER_HEADERS
+	${PROJECT_SOURCE_DIR}/include/${MODULE_NAME}/inner/*.hpp 
+	${PROJECT_SOURCE_DIR}/include/${MODULE_NAME}/inner/*.h
+)
+source_group(Include\\inner FILES ${INNER_HEADERS})
+
+# 将源文件和内部头文件归组
+FILE(GLOB ROOT_SOURCES
+	./*.cpp 
+	./*.c
+	./*.hpp 
+	./*.h
+)
+source_group("Source" FILES ${ROOT_SOURCES})
+
+# 项目输出动态库
+ADD_LIBRARY(${MODULE_NAME} SHARED 
+			${INNER_HEADERS}
+			${ROOT_HEADERS}
+			${ROOT_SOURCES}
+)
+set_target_properties(${MODULE_NAME} 
+				PROPERTIES FOLDER Core
+)
+# SET_TARGET_PROPERTIES(${LIB_NAME} 
+					# PROPERTIES RUNTIME_OUTPUT_DIRECTORY  
+					# "${PROJECT_SOURCE_DIR}/" 
+# )
+# SET_TARGET_PROPERTIES(${LIB_NAME} 
+					# PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG 
+					# "${PROJECT_SOURCE_DIR}/bin/debug" 
+# )
+# SET_TARGET_PROPERTIES(${LIB_NAME} 
+					# PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE 
+					# "${PROJECT_SOURCE_DIR}/bin/release"
+# )
+
+# 添加系统库
+
+# 添加内部库
+LINK_INTERNAL_LIB(${MODULE_NAME} 
+			
+)
