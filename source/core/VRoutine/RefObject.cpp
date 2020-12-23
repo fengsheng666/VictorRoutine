@@ -17,10 +17,16 @@
 
 using namespace VictorRoutine;
 
+RefObject::RefObject()
+{
+	m_refWeak.store(0);
+	m_refCount.store(0);
+}
+
 RefObject::~RefObject()
 {
 	RefWeak* refWeak = m_refWeak.load();
-	if (0 != refWeak)
+	if (0 == refWeak)
 	{
 		return;
 	}

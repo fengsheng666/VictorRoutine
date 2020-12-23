@@ -31,6 +31,7 @@ namespace VictorRoutine
 		{
 			AtomicQueueItem* begin = new AtomicQueueItem(NULL, item);
 			AtomicQueueItem* end = begin;
+			assert(begin != NULL);
 			AtomicQueueBase::append(begin, end, 1);
 		}
 		T* pop(std::function<bool(T*)> filterFunc)

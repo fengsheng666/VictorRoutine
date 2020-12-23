@@ -28,7 +28,7 @@ namespace VictorRoutine
 	public:
 		virtual ~RefObject();
 	protected:
-		RefObject() : m_refCount(0), m_refWeak(0) { }
+		RefObject();
 	private:
 		int addRef();
 		int unRef();

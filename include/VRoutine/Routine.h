@@ -32,8 +32,7 @@ namespace VictorRoutine
 		Routine(std::function<void()> func);
 		~Routine();
 		Routine& addDependence(MultiThreadShared* obj, bool bExclusive = true);
-		//建议传递一个有效的dispatcher，防止栈溢出
-		void go(Dispatcher* dispatcher = 0);
+		bool go(Dispatcher* dispatcher);
 
 	private:
 		std::map<MultiThreadShared*, bool>	m_deps;

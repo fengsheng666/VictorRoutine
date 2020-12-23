@@ -17,7 +17,7 @@
 
 using namespace VictorRoutine;
 
-static RefObject* INVALID_PTR = (RefObject*)0xffffffffffffffff;
+static RefObject* INVALID_PTR = (RefObject*)(-1);
 
 RefWeak::~RefWeak()
 {

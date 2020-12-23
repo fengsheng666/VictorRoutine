@@ -36,19 +36,27 @@ Routine& Routine::addDependence(MultiThreadShared* obj, bool bExclusive)
 	return *this;
 }
 
-void Routine::go(Dispatcher* dispatcher)
+bool Routine::go(Dispatcher* dispatcher)
 {
-	if (!m_task)
+	assert(m_task != NULL);
+	if (m_task->schedules().size() != m_deps.size())
 	{
-		return;
+		m_task->schedules().resize(m_deps.size());
+		std::map<MultiThreadShared*, bool>::const_iterator iter = m_deps.begin();
+		for (int i = 0; i < m_task->schedules().size(); i++, iter++)
+		{
+			(m_task->schedules())[i].m_object = iter->first;
+			(m_task->schedules())[i].m_bExclusive = iter->second;
+		}
 	}
-	m_task->schedules().resize(m_deps.size());
-	std::map<MultiThreadShared*, bool>::const_iterator iter = m_deps.begin();
-	for (int i = 0; iter != m_deps.end(); iter++, i++)
+	if (m_task->execute(NULL, dispatcher))
 	{
-		(m_task->schedules())[i].m_object = iter->first;
-		(m_task->schedules())[i].m_bExclusive = iter->second;
+		m_task = NULL;
+		return true;
 	}
-	m_task->consume(NULL, dispatcher);
-	m_task = NULL;
+	else
+	{
+		return false;
+	}
+	
 }

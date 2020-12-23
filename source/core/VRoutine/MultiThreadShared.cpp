@@ -18,14 +18,12 @@
 #include <VRoutine/AtomicQueue.h>
 #include <VRoutine/Dispatcher.h>
 
-#define TASK_QUEUE_MAX_LENGTH	(1024)
-
 namespace VictorRoutine
 {
 	class TaskQueue : public AtomicQueue<Task>
 	{
 	public:
-		TaskQueue() : AtomicQueue<Task>(TASK_QUEUE_MAX_LENGTH) { }
+		TaskQueue() : AtomicQueue<Task>(VROUTINE_TASK_QUEUE_MAX_LENGTH) { }
 	};
 }
 
@@ -111,7 +109,7 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 			{
 				Task* item = *iter;
 				std::function<void()> schedule = [item, dispatcher, currentObject](){
-					item->consume(currentObject, dispatcher);
+					assert(item->execute(currentObject, dispatcher));
 				};
 				if (!dispatcher || !dispatcher->post(schedule))
 				{

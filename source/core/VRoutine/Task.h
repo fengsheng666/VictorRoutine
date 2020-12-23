@@ -36,7 +36,8 @@ namespace VictorRoutine
 			StrongPtr<MultiThreadShared>	m_object; 
 			bool							m_bExclusive;
 		};
-		Task(std::function<void()> func) : m_function(func), m_blockPos(-1) { }
+		inline Task(std::function<void()> func)
+			: m_function(func), m_blockPos(-1) { }
 		~Task() { }
 		inline std::vector<ScheduleInfo>& schedules()
 		{
@@ -48,7 +49,7 @@ namespace VictorRoutine
 			assert(m_schedules[m_blockPos].m_object == obj);
 			return m_schedules[m_blockPos].m_bExclusive;
 		}
-		void consume(MultiThreadShared* obj, Dispatcher* dispatcher);
+		bool execute(MultiThreadShared* obj, Dispatcher* dispatcher);
 		
 	private: 
 		std::function<void()>		m_function;

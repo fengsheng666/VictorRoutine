@@ -13,15 +13,35 @@
 // limitations under the License.
 
 #include "./Task.h"
+#include <VRoutine/VRoutineDef.h>
+
+static std::atomic<int> g_suspendCount;
 
 using namespace VictorRoutine;
 
-void Task::consume(MultiThreadShared* obj, Dispatcher* dispatcher)
+bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher)
 {
 	if (obj != NULL)
 	{
 		assert(m_blockPos >= 0 && m_blockPos < m_schedules.size());
 		assert(m_schedules[m_blockPos].m_object == obj);
+	}
+	else
+	{
+#if defined(VROUTINE_SUSPEND_TASK_MAX_COUNT) && (VROUTINE_SUSPEND_TASK_MAX_COUNT > 0)
+		int expected = g_suspendCount.load();
+		do 
+		{
+			if (expected + 1 > VROUTINE_SUSPEND_TASK_MAX_COUNT)
+			{
+				return false;
+			}
+			if (g_suspendCount.compare_exchange_weak(expected, expected + 1))
+			{
+				break;
+			}
+		} while (expected = g_suspendCount.load());
+#endif
 	}
 	for (m_blockPos++; m_blockPos < m_schedules.size(); m_blockPos++)
 	{
@@ -29,7 +49,7 @@ void Task::consume(MultiThreadShared* obj, Dispatcher* dispatcher)
 			m_schedules[m_blockPos].m_object->preempt(this);
 		if (!preempted)
 		{
-			return;
+			return true;
 		}
 	}
 
@@ -37,10 +57,14 @@ void Task::consume(MultiThreadShared* obj, Dispatcher* dispatcher)
 
 	for (int pos = m_schedules.size() - 1; pos >= 0; pos--)
 	{
-		m_schedules[m_blockPos].m_object->release(dispatcher);
+		m_schedules[pos].m_object->release(dispatcher);
 	}
 
+#if defined(VROUTINE_SUSPEND_TASK_MAX_COUNT) && (VROUTINE_SUSPEND_TASK_MAX_COUNT > 0)
+	g_suspendCount.fetch_sub(1);
+#endif
 	delete this;
+	return true;
 }
 
 

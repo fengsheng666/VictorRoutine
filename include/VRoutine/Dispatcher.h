@@ -16,10 +16,11 @@
 #define DISPATCHER_H_VROUTINE
 
 #include <functional>
+#include <VRoutine/VRoutineDef.h>
 
 namespace VictorRoutine
 {
-	class Dispatcher
+	class VROUTINE_API Dispatcher
 	{
 	public:
 		virtual ~Dispatcher(){ }

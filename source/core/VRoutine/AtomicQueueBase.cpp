@@ -16,12 +16,14 @@
 
 using namespace VictorRoutine;
 
-static AtomicQueueBase::AtomicQueueItem* INVALID_PTR = (AtomicQueueBase::AtomicQueueItem*)0xffffffffffffffff;
+static AtomicQueueBase::AtomicQueueItem* INVALID_PTR = (AtomicQueueBase::AtomicQueueItem*)(-1);
 
 AtomicQueueBase::AtomicQueueBase(int maxSize) : m_maxSize(maxSize)
 {
 	m_head.store(0);
 	m_tail.store(0);
+
+	m_size.store(0);
 }
 
 AtomicQueueBase::~AtomicQueueBase()
@@ -31,10 +33,26 @@ AtomicQueueBase::~AtomicQueueBase()
 
 void AtomicQueueBase::append(AtomicQueueItem* begin, AtomicQueueItem* end, int length)
 {
-	int oldSize = m_size.fetch_add(length);
-	for (; oldSize + length > m_maxSize; oldSize = m_size.fetch_add(length))
+	while (m_maxSize > 0 && m_size.load() > m_maxSize) {}
+	if (m_maxSize > 0)
 	{
-		m_size.fetch_sub(length);
+		int expected = m_size.load();
+		do
+		{
+			if (expected + length > m_maxSize)
+			{
+				continue;
+			}
+			if (m_size.compare_exchange_weak(expected, expected + length))
+			{
+				break;
+			}
+
+		} while (expected = m_size.load());
+	}
+	else
+	{
+		m_size.fetch_add(length);
 	}
 	//<<<insert：在此插入“关闭”中断机制
 	AtomicQueueItem* old = m_tail.exchange(end);
@@ -71,10 +89,6 @@ AtomicQueueBase::AtomicQueueItem* AtomicQueueBase::pop(std::function<bool(Atomic
 		{
 			continue;
 		}
-		if (!filterFunc(head))
-		{
-			return NULL;
-		}
 		AtomicQueueItem* expected = head;
 		//<<<insert：在此插入“关闭”中断机制
 		if (m_head.compare_exchange_weak(expected, INVALID_PTR))
@@ -82,6 +96,11 @@ AtomicQueueBase::AtomicQueueItem* AtomicQueueBase::pop(std::function<bool(Atomic
 			break;
 		}
 		//<<<insert：在此插入“恢复”中断机制
+	}
+	if (!filterFunc(head))
+	{
+		m_head.store(head);
+		return NULL;
 	}
 	//m_tail == head 为最后一个元素，则 set m_tail=NULL
 	AtomicQueueItem* expected = head;
