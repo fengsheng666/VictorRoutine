@@ -26,9 +26,9 @@ namespace VictorRoutine
 	public:
 		struct AtomicQueueItem
 		{
-			AtomicQueueItem()  //: _ptr(0)
+			AtomicQueueItem() : _ptr(0)
 			{
-				//_next.store(0);
+				_next.store(0);
 			}
 			AtomicQueueItem(AtomicQueueItem* next, void* ptr)
 				: _ptr(ptr){

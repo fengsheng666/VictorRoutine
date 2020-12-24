@@ -37,6 +37,17 @@ public:
 	{
 		m_data.resize(2, 0);
 	}
+	~SharedData()
+	{
+		for (int i = 0; i < m_data.size(); i++)
+		{
+			if (m_data[i])
+			{
+				delete m_data[i];
+			}
+		}
+		//printf("~SharedData\n");
+	}
 	void modifyOnLocker()
 	{
 		m_locker.tryLock();
@@ -49,8 +60,8 @@ public:
 		srand(itemTwo ? itemTwo->_value : 1);
 		m_data[1] = new SharedItem(rand());
 
-		delete itemOne;
-		delete itemTwo;
+		if (itemOne) delete itemOne;
+		if (itemTwo) delete itemTwo;
 		
 		m_locker.unLock();
 	}
@@ -64,8 +75,8 @@ public:
 		srand(itemTwo ? itemTwo->_value : 1);
 		m_data[1] = new SharedItem(rand());
 
-		delete itemOne;
-		delete itemTwo;
+		if (itemOne) delete itemOne;
+		if (itemTwo) delete itemTwo;
 	}
 
 private:
@@ -83,9 +94,14 @@ public:
 		std::function<void()> _func;
 	};
 	TestDispatcher() : m_funcQueue(0) {}
+	~TestDispatcher()
+	{
+		//printf("~TestDispatcher\n");
+	}
 	virtual bool post(std::function<void()> func)
 	{
 		FuncWrapper* fw = new FuncWrapper(func);
+		assert(fw);
 		m_funcQueue.append(fw);
 		return true;
 	}
@@ -119,6 +135,7 @@ void ThreadFunc(VictorRoutine::StrongPtr<TestDispatcher> dispatcher)
 	{
 		func();
 	}
+	// printf("ThreadFunc exit\n")
 }
 
 long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRoutine)
@@ -143,8 +160,16 @@ long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRout
 			dispatcher->post([sd, maxTicks, runOnRoutine, dptr, &ticks, &timeEnd](){
 				if (runOnRoutine)
 				{
-					bool suc = VictorRoutine::Routine([sd](){
+					bool suc = VictorRoutine::Routine([sd, maxTicks, &ticks, &timeEnd](){
 						sd->modifyOnRoutine();
+						int old = ticks.fetch_add(1);
+						if (old + 1 == maxTicks)
+						{
+							//结束计时
+							timeEnd = std::chrono::duration_cast<std::chrono::milliseconds>(
+								std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+							ticks.fetch_add(1);
+						}
 					}).addDependence(sd, true).go(dptr);
 					if (!suc)
 					{
@@ -154,14 +179,14 @@ long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRout
 				else
 				{
 					sd->modifyOnLocker();
-				}
-				int old = ticks.fetch_add(1);
-				if (old + 1 == maxTicks)
-				{
-					//结束计时
-					timeEnd = std::chrono::duration_cast<std::chrono::milliseconds>(
-						std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-					ticks.fetch_add(1);
+					int old = ticks.fetch_add(1);
+					if (old + 1 == maxTicks)
+					{
+						//结束计时
+						timeEnd = std::chrono::duration_cast<std::chrono::milliseconds>(
+							std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+						ticks.fetch_add(1);
+					}
 				}
 			});
 		}
@@ -191,7 +216,7 @@ int main(int argc, char* argv[])
 	int forCount = 1024 * 64;
 
 	//统计statisticTimes次 求平均时间消耗
-	long long statisticTimes = 64;
+	long long statisticTimes = 32;
 
 	long long timeBegin = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();
@@ -201,9 +226,9 @@ int main(int argc, char* argv[])
 		mutexTotal += caculateTimes(threadNum, dataNum, forCount, false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
-	printf("work on mutex: statistic %lld times, total   take %lld ms\n", 
+	printf("work on mutex: statistic %lld times, total   take %lld ms\n",
 		statisticTimes, mutexTotal);
-	printf("work on mutex: statistic %lld times, average take %lld ms\n", 
+	printf("work on mutex: statistic %lld times, average take %lld ms\n",
 		statisticTimes, mutexTotal / statisticTimes);
 	long long timeMid = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();

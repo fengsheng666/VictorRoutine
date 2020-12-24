@@ -28,7 +28,7 @@ AtomicQueueBase::AtomicQueueBase(int maxSize) : m_maxSize(maxSize)
 
 AtomicQueueBase::~AtomicQueueBase()
 {
-
+	assert(m_head.load() == NULL);
 }
 
 void AtomicQueueBase::append(AtomicQueueItem* begin, AtomicQueueItem* end, int length)

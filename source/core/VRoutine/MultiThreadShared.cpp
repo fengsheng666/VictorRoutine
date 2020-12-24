@@ -43,7 +43,7 @@ MultiThreadShared::~MultiThreadShared()
 bool MultiThreadShared::preempt(Task* task)
 {
 	m_taskQueue->append(task);
-	const Task* head = NULL;
+	volatile const Task* head = NULL;
 	m_taskQueue->front([&](const Task* item){
 		head = item;
 	});
@@ -109,7 +109,8 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 			{
 				Task* item = *iter;
 				std::function<void()> schedule = [item, dispatcher, currentObject](){
-					assert(item->execute(currentObject, dispatcher));
+					bool task_run_success = item->execute(currentObject, dispatcher);
+					assert(task_run_success);
 				};
 				if (!dispatcher || !dispatcher->post(schedule))
 				{
@@ -121,7 +122,7 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 		}
 		//将 m_preemptFlag 复位后，若无新task 就退出、反之进行抢占式调度
 		m_preemptFlag.store(false);
-		const Task* head = NULL;
+		volatile const Task* head = NULL;
 		m_taskQueue->front([&](const Task* item){
 			head = item;
 		});

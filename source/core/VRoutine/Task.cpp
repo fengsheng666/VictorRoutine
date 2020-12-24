@@ -15,7 +15,10 @@
 #include "./Task.h"
 #include <VRoutine/VRoutineDef.h>
 
-static std::atomic<int> g_suspendCount;
+#include <thread>
+#include <chrono>
+
+static std::atomic<int> g_suspendCount(0);
 
 using namespace VictorRoutine;
 
@@ -63,24 +66,7 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher)
 #if defined(VROUTINE_SUSPEND_TASK_MAX_COUNT) && (VROUTINE_SUSPEND_TASK_MAX_COUNT > 0)
 	g_suspendCount.fetch_sub(1);
 #endif
+	
 	delete this;
 	return true;
 }
-
-
-/*
-#include <VRoutine/StrongPtr.h>
-#include <VRoutine/WeakPtr.h>
-#include <VRoutine/RefObject.h>
-
-class RefTest : public VictorRoutine::RefObject
-{
-public:
-	static void Test()
-	{
-		VictorRoutine::StrongPtr<RefTest> sptr = new RefTest;
-		VictorRoutine::WeakPtr<RefTest> wptr = sptr.get();
-	}
-	RefTest(){ }
-}; 
-*/

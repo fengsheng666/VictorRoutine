@@ -32,7 +32,10 @@ namespace VictorRoutine
 			ScheduleInfo() : m_object(0), m_bExclusive(true) { }
 			ScheduleInfo(MultiThreadShared* obj, bool bExclusive) 
 				: m_object(obj), m_bExclusive(bExclusive) { }
-			~ScheduleInfo() { }
+			~ScheduleInfo() 
+			{
+				m_object = 0;
+			}
 			StrongPtr<MultiThreadShared>	m_object; 
 			bool							m_bExclusive;
 		};

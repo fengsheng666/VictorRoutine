@@ -63,7 +63,8 @@ RefWeak* RefObject::getRefWeak()
 		return oldWeak;
 	}
 	RefWeak* newWeak = new RefWeak(this);
-	assert(newWeak->addRef() == 1);
+	int rw_init_ref_count = newWeak->addRef();
+	assert(rw_init_ref_count == 1);
 	RefWeak* expected = 0;
 	//if m_refWeak==NULL set m_refWeak=newWeak
 	if (m_refWeak.compare_exchange_strong(expected, newWeak))
