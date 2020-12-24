@@ -175,7 +175,10 @@ long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRout
 		std::thread background_thread(ThreadFunc, dispatcher);
 		background_thread.detach();
 	}
-	while (ticks <= maxTicks){}
+	while (ticks <= maxTicks)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	}
 	return (long long)timeEnd - (long long)timeBegin;
 }
 
@@ -185,10 +188,10 @@ int main(int argc, char* argv[])
 	//						共dataNum * forCount个请求
 	int threadNum = 8;
 	int dataNum = 16;
-	int forCount = 1024;
+	int forCount = 1024 * 64;
 
 	//统计statisticTimes次 求平均时间消耗
-	long long statisticTimes = 1024;
+	long long statisticTimes = 64;
 
 	long long timeBegin = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();
@@ -196,29 +199,36 @@ int main(int argc, char* argv[])
 	for (long long i = 0; i < statisticTimes; i++)
 	{
 		mutexTotal += caculateTimes(threadNum, dataNum, forCount, false);
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
-	printf("work on mutex: statistic %lld times, total   times = %lld\n", 
+	printf("work on mutex: statistic %lld times, total   take %lld ms\n", 
 		statisticTimes, mutexTotal);
-	printf("work on mutex: statistic %lld times, average times = %lld\n", 
+	printf("work on mutex: statistic %lld times, average take %lld ms\n", 
 		statisticTimes, mutexTotal / statisticTimes);
 	long long timeMid = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-	printf("%lld\n", timeMid - timeBegin);
+	//printf("%lld\n", timeMid - timeBegin);
+	printf("\n");
 
 	long long routineTotal = 0;
 	for (long long i = 0; i < statisticTimes; i++)
 	{
 		routineTotal += caculateTimes(threadNum, dataNum, forCount, true);
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
-	printf("work on routine: statistic %lld times,  total   times = %lld\n", 
+	printf("work on routine: statistic %lld times,  total   take %lld ms\n", 
 		statisticTimes, routineTotal);
-	printf("work on routine: statistic %lld times,  average times = %lld\n", 
+	printf("work on routine: statistic %lld times,  average take %lld ms\n", 
 		statisticTimes, routineTotal / statisticTimes);
 	long long timeEnd = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-	printf("%lld\n", timeEnd - timeMid);
+	//printf("%lld\n", timeEnd - timeMid);
+	printf("\n");
 
-	while (true) {}
+	while (true) 
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	}
 
 	return 0;
 }
