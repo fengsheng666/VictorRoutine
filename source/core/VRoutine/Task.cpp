@@ -15,9 +15,6 @@
 #include "./Task.h"
 #include <VRoutine/VRoutineDef.h>
 
-#include <thread>
-#include <chrono>
-
 static std::atomic<int> g_suspendCount(0);
 
 using namespace VictorRoutine;
@@ -66,7 +63,6 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher)
 #if defined(VROUTINE_SUSPEND_TASK_MAX_COUNT) && (VROUTINE_SUSPEND_TASK_MAX_COUNT > 0)
 	g_suspendCount.fetch_sub(1);
 #endif
-	
 	delete this;
 	return true;
 }
