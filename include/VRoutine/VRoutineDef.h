@@ -16,6 +16,8 @@
 #define VROUTINEDEF_H_VROUTINE
 
 #include "../VictorDef/VictorDef.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 ///宏定义
 #ifdef VROUTINE_LIB
@@ -24,8 +26,21 @@
 #define VROUTINE_API VICTOR_IMPORT
 #endif
 
-#define VROUTINE_SUSPEND_TASK_MAX_COUNT	(1024)
+static inline void vroutine_check(bool stat, const char* err, const char* filename, int line)
+{
+	if (!stat)
+	{
+		printf("!(%s) : in %s(%d)\n", err, filename, line);
+		abort();
+	}
+}
 
-#define VROUTINE_TASK_QUEUE_MAX_LENGTH	(1024)
+#define VROUTINE_CHECKER(_Expression)	vroutine_check((_Expression),#_Expression,__FILE__,__LINE__)
+
+#define VROUTINE_TASK_POOL_CACHE_COUNT	(0)
+
+#define VROUTINE_ACTIVE_TASK_MAX_COUNT	(0)
+
+#define VROUTINE_TASK_QUEUE_MAX_LENGTH	(0)
 
 #endif

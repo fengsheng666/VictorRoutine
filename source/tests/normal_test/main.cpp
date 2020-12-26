@@ -46,7 +46,7 @@ public:
 				delete m_data[i];
 			}
 		}
-		//printf("~SharedData\n");
+		// printf("~SharedData\n");
 	}
 	void modifyOnLocker()
 	{
@@ -101,15 +101,20 @@ public:
 	virtual bool post(std::function<void()> func)
 	{
 		FuncWrapper* fw = new FuncWrapper(func);
-		assert(fw);
-		m_funcQueue.append(fw);
+		if (fw == NULL)
+		{
+			printf("TestDispatcher post fw == NULL!\n");
+		}
+		VROUTINE_CHECKER(fw);
+		if (!m_funcQueue.append(fw))
+		{
+			printf("TestDispatcher post fault!\n");
+		}
 		return true;
 	}
 	std::function<void()> pop(bool &ok)
 	{
-		FuncWrapper* fw = m_funcQueue.pop([](FuncWrapper* item){
-			return true;
-		});
+		FuncWrapper* fw = m_funcQueue.pop();
 		std::function<void()> func;
 		if (fw)
 		{
@@ -127,7 +132,7 @@ private:
 	VictorRoutine::AtomicQueue<FuncWrapper> m_funcQueue;
 };
 
-void ThreadFunc(VictorRoutine::StrongPtr<TestDispatcher> dispatcher)
+void ThreadFunc(VictorRoutine::StrongPtr<TestDispatcher> dispatcher, int groupId)
 {
 	bool ok = false;
 	std::function<void()> func = dispatcher->pop(ok);
@@ -135,18 +140,18 @@ void ThreadFunc(VictorRoutine::StrongPtr<TestDispatcher> dispatcher)
 	{
 		func();
 	}
-	// printf("ThreadFunc exit\n")
+	//printf("thread of group %d exit\n", groupId);
 }
 
-long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRoutine)
+long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRoutine, int groupId)
 {
-	std::atomic<int> ticks;
+	std::atomic<int> ticks(0);
 	long long	timeEnd = 0;
 
 	TestDispatcher* dptr = new TestDispatcher;
 	VictorRoutine::StrongPtr<TestDispatcher> dispatcher = dptr;
 
-	ticks.store(0);
+	ticks.store(0); 
 
 	std::vector<VictorRoutine::StrongPtr<SharedData>> sharedDatas;
 	sharedDatas.resize(dataNum);
@@ -157,6 +162,7 @@ long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRout
 		sharedDatas[k] = sd;
 		for (int i = 0; i < forCount; i++)
 		{
+			std::atomic<int>* pts = &ticks;
 			dispatcher->post([sd, maxTicks, runOnRoutine, dptr, &ticks, &timeEnd](){
 				if (runOnRoutine)
 				{
@@ -191,19 +197,21 @@ long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRout
 			});
 		}
 	}
-
+	//printf("begin run thread\n");
 	//开始计时
 	long long timeBegin = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	for (int i = 0; i < threadNum; i++)
 	{
-		std::thread background_thread(ThreadFunc, dispatcher);
+		std::thread background_thread(ThreadFunc, dispatcher, groupId);
 		background_thread.detach();
 	}
+	//printf("begin wait thread\n");
 	while (ticks <= maxTicks)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
+	//printf("end wait thread\n");
 	return (long long)timeEnd - (long long)timeBegin;
 }
 
@@ -216,14 +224,14 @@ int main(int argc, char* argv[])
 	int forCount = 1024 * 64;
 
 	//统计statisticTimes次 求平均时间消耗
-	long long statisticTimes = 32;
+	long long statisticTimes = 64;
 
 	long long timeBegin = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	long long mutexTotal = 0;
 	for (long long i = 0; i < statisticTimes; i++)
 	{
-		mutexTotal += caculateTimes(threadNum, dataNum, forCount, false);
+		mutexTotal += caculateTimes(threadNum, dataNum, forCount, false, i);
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
 	printf("work on mutex: statistic %lld times, total   take %lld ms\n",
@@ -238,7 +246,7 @@ int main(int argc, char* argv[])
 	long long routineTotal = 0;
 	for (long long i = 0; i < statisticTimes; i++)
 	{
-		routineTotal += caculateTimes(threadNum, dataNum, forCount, true);
+		routineTotal += caculateTimes(threadNum, dataNum, forCount, true, i);
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
 	printf("work on routine: statistic %lld times,  total   take %lld ms\n", 

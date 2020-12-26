@@ -48,7 +48,7 @@ namespace VictorRoutine
 			if (ptr && ptr->unRef() == 0)
 			{
 				static bool dynamic_cast_RefObject_to_template_T = false;
-				assert(dynamic_cast_RefObject_to_template_T);
+				VROUTINE_CHECKER(dynamic_cast_RefObject_to_template_T);
 				delete ptr;
 			}
 			return sptr;

@@ -34,10 +34,10 @@ RefObject::~RefObject()
 	//if refWeak->m_refStrong==this set refWeak->m_refStrong=NULL
 	while (!refWeak->m_refStrong.compare_exchange_weak(expected, 0))
 	{
-		assert(expected != 0);
+		VROUTINE_CHECKER(expected != 0);
 		expected = this;
 	}
-	assert(expected == this);
+	VROUTINE_CHECKER(expected == this);
 	int newRefCount = refWeak->unRef();
 	if(newRefCount == 0) 
 	{
@@ -64,12 +64,12 @@ RefWeak* RefObject::getRefWeak()
 	}
 	RefWeak* newWeak = new RefWeak(this);
 	int rw_init_ref_count = newWeak->addRef();
-	assert(rw_init_ref_count == 1);
+	VROUTINE_CHECKER(rw_init_ref_count == 1);
 	RefWeak* expected = 0;
 	//if m_refWeak==NULL set m_refWeak=newWeak
 	if (m_refWeak.compare_exchange_strong(expected, newWeak))
 	{
-		assert(expected == 0);
+		VROUTINE_CHECKER(expected == 0);
 		return newWeak;
 	}
 	else

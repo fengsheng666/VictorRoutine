@@ -13,26 +13,109 @@
 // limitations under the License.
 
 #include "./Task.h"
-#include <VRoutine/VRoutineDef.h>
-
-static std::atomic<int> g_suspendCount(0);
 
 using namespace VictorRoutine;
+
+#if defined(VROUTINE_TASK_POOL_CACHE_COUNT) && (VROUTINE_TASK_POOL_CACHE_COUNT > 0)
+
+static std::atomic<int> g_taskNewCount(0);
+
+namespace VictorRoutine
+{
+	class TaskPool : public AtomicQueueBase
+	{
+	public:
+		TaskPool() : AtomicQueueBase(0)
+		{ 
+			for (int i = 0; i < VROUTINE_TASK_POOL_CACHE_COUNT; i++)
+			{
+				Task* ptr = (Task*)malloc(sizeof(Task));
+				ptr->getQueueNode()->setNext(NULL);
+				ptr->getQueueNode()->_ptr = ptr;
+				VROUTINE_CHECKER(ptr != NULL);
+				dealloc(ptr);
+				g_taskNewCount.fetch_add(1);
+			}
+		}
+		~TaskPool()
+		{
+
+		}
+		Task* alloc()
+		{
+			AtomicQueueItem* item = AtomicQueueBase::pop();
+			if (NULL == item)
+			{
+				return NULL;
+			}
+			return (Task*)item->_ptr;
+		}
+		void dealloc(Task* ptr)
+		{
+			VROUTINE_CHECKER(ptr != NULL);
+			AtomicQueueItem* item = ptr->getQueueNode();
+			while (!AtomicQueueBase::append(item, item, 1)){}
+		}
+	};
+}
+
+VictorRoutine::TaskPool g_taskPool;
+
+void* Task::operator new(size_t size)
+{
+	VROUTINE_CHECKER(sizeof(Task) == size);
+	void* ptr = g_taskPool.alloc();
+	if (ptr)
+	{
+		return ptr;
+	}
+	ptr = malloc(size);
+	if (ptr == NULL)
+	{
+		return NULL;
+	}
+	g_taskNewCount.fetch_add(1);
+	return ptr;
+}
+
+void Task::operator delete(void* ptr)
+{
+	if (!ptr)
+	{
+		return;
+	}
+	int oldCount = g_taskNewCount.fetch_sub(1);
+	if (oldCount > VROUTINE_TASK_POOL_CACHE_COUNT)
+	{
+		free(ptr);
+	}
+	else
+	{
+		g_taskPool.dealloc((Task*)ptr);
+		g_taskNewCount.fetch_add(1);
+	}
+}
+
+#endif //VROUTINE_TASK_POOL_CACHE_COUNT
+
+#if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)
+static std::atomic<int> g_suspendCount(0);
+#endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
 
 bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher)
 {
 	if (obj != NULL)
 	{
-		assert(m_blockPos >= 0 && m_blockPos < m_schedules.size());
-		assert(m_schedules[m_blockPos].m_object == obj);
+		VROUTINE_CHECKER(m_blockPos >= 0 && m_blockPos < m_schedules.size());
+		VROUTINE_CHECKER(m_schedules[m_blockPos].m_object == obj);
 	}
 	else
 	{
-#if defined(VROUTINE_SUSPEND_TASK_MAX_COUNT) && (VROUTINE_SUSPEND_TASK_MAX_COUNT > 0)
+#if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)
 		int expected = g_suspendCount.load();
-		do 
+		for(; true; expected = g_suspendCount.load()) 
 		{
-			if (expected + 1 > VROUTINE_SUSPEND_TASK_MAX_COUNT)
+			if (expected + 1 > VROUTINE_ACTIVE_TASK_MAX_COUNT)
 			{
 				return false;
 			}
@@ -40,8 +123,8 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher)
 			{
 				break;
 			}
-		} while (expected = g_suspendCount.load());
-#endif
+		}
+#endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
 	}
 	for (m_blockPos++; m_blockPos < m_schedules.size(); m_blockPos++)
 	{
@@ -60,9 +143,9 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher)
 		m_schedules[pos].m_object->release(dispatcher);
 	}
 
-#if defined(VROUTINE_SUSPEND_TASK_MAX_COUNT) && (VROUTINE_SUSPEND_TASK_MAX_COUNT > 0)
+#if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)
 	g_suspendCount.fetch_sub(1);
-#endif
+#endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
 	delete this;
 	return true;
 }

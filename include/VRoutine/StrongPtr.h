@@ -99,7 +99,7 @@ namespace VictorRoutine
 		{
 			RefObject* ptr = StrongPtrBase::release()
 			T* impl = dynamic_cast<T*>(ptr);
-			assert((ptr == NULL && impl == NULL) || (ptr != NULL && impl != NULL));
+			VROUTINE_CHECKER((ptr == NULL && impl == NULL) || (ptr != NULL && impl != NULL));
 			return impl;
 		}
 	};

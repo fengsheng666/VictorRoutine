@@ -26,7 +26,7 @@ namespace VictorRoutine
 	public:
 		struct AtomicQueueItem
 		{
-			AtomicQueueItem() : _ptr(0)
+			AtomicQueueItem() : _ptr(0) 
 			{
 				_next.store(0);
 			}
@@ -34,23 +34,24 @@ namespace VictorRoutine
 				: _ptr(ptr){
 				_next.store(next);
 			}
-			AtomicQueueItem* getNext()
+			inline AtomicQueueItem* getNext()
 			{
 				return _next.load();
 			}
-			void setNext(AtomicQueueItem* next)
+			inline void setNext(AtomicQueueItem* next)
 			{
 				_next.store(next);
 			}
 			std::atomic<AtomicQueueItem*>	_next;
 			void*							_ptr;
 		};
+		~AtomicQueueBase();
+		bool append(AtomicQueueItem* begin, AtomicQueueItem* end, int length);
+		AtomicQueueItem* pop();
+		AtomicQueueItem* pop(std::function<bool(void*)> filterFunc);
+		void front(std::function<void(const void*)> recver);
 	protected:
 		AtomicQueueBase(int maxSize);
-		~AtomicQueueBase();
-		void append(AtomicQueueItem* begin, AtomicQueueItem* end, int length);
-		AtomicQueueItem* pop(std::function<bool(AtomicQueueItem*)> filterFunc);
-		void front(std::function<void(const AtomicQueueItem*)> recver);
 	private:
 		const int						m_maxSize;
 		std::atomic<AtomicQueueItem*>	m_head;

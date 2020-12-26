@@ -15,15 +15,17 @@
 #include <list>
 #include <VRoutine/MultiThreadShared.h>
 #include "./Task.h"
-#include <VRoutine/AtomicQueue.h>
+#include <VRoutine/inner/AtomicQueueBase.h>
 #include <VRoutine/Dispatcher.h>
 
 namespace VictorRoutine
 {
-	class TaskQueue : public AtomicQueue<Task>
+	class TaskQueue : public AtomicQueueBase
 	{
 	public:
-		TaskQueue() : AtomicQueue<Task>(VROUTINE_TASK_QUEUE_MAX_LENGTH) { }
+		TaskQueue() 
+			: AtomicQueueBase(VROUTINE_TASK_QUEUE_MAX_LENGTH) { }
+		~TaskQueue(){ }
 	};
 }
 
@@ -42,10 +44,12 @@ MultiThreadShared::~MultiThreadShared()
 
 bool MultiThreadShared::preempt(Task* task)
 {
-	m_taskQueue->append(task);
+	AtomicQueueBase::AtomicQueueItem* ti = task->getQueueNode();
+	VROUTINE_CHECKER(task == ti->_ptr);
+	while (!m_taskQueue->append(ti, ti, 1)) { }
 	volatile const Task* head = NULL;
-	m_taskQueue->front([&](const Task* item){
-		head = item;
+	m_taskQueue->front([&](const void* ptr){
+		head = (const Task*)ptr;
 	});
 	if (head != task)
 	{
@@ -57,10 +61,8 @@ bool MultiThreadShared::preempt(Task* task)
 		return false;
 	}
 	m_sharedCount.fetch_add(1);
-	Task* item = m_taskQueue->pop([](Task* item){
-		return true;
-	});
-	assert(item == task);
+	Task* item = (Task*)m_taskQueue->pop()->_ptr;
+	VROUTINE_CHECKER(item == task);
 	return true;
 }
 
@@ -74,9 +76,8 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 	bool expected = false;
 	do 
 	{
-		Task* first = m_taskQueue->pop([](Task* item){
-			return true;
-		});
+		AtomicQueueBase::AtomicQueueItem* pi = m_taskQueue->pop();
+		Task* first = (pi ? (Task*)pi->_ptr : NULL);
 		if (first)
 		{
 			MultiThreadShared* currentObject = this;
@@ -90,15 +91,13 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 			{
 				m_sharedCount.fetch_add(1);
 				tasks.push_back(first);
-				for (Task* next = m_taskQueue->pop([currentObject](Task* item){
-							return item->exclusiveOnObject(currentObject) == false;
-						});
+				for (AtomicQueueBase::AtomicQueueItem* next = m_taskQueue->pop([currentObject](void* ptr){
+						return ((Task*)ptr)->exclusiveOnObject(currentObject) == false;});
 					next != NULL;
-					next = m_taskQueue->pop([currentObject](Task* item){
-							return item->exclusiveOnObject(currentObject) == false;
-						}) )
+					next = m_taskQueue->pop([currentObject](void* ptr){
+						return ((Task*)ptr)->exclusiveOnObject(currentObject) == false; }))
 				{
-					tasks.push_back(next);
+					tasks.push_back((Task*)next->_ptr);
 					m_sharedCount.fetch_add(1);
 				}
 				
@@ -110,9 +109,17 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 				Task* item = *iter;
 				std::function<void()> schedule = [item, dispatcher, currentObject](){
 					bool task_run_success = item->execute(currentObject, dispatcher);
-					assert(task_run_success);
+					VROUTINE_CHECKER(task_run_success);
 				};
-				if (!dispatcher || !dispatcher->post(schedule))
+				if (dispatcher)
+				{
+					if (!dispatcher->post(schedule))
+					{
+						printf("dispatcher post task fault !!!\n");
+						schedule();
+					}
+				}
+				else
 				{
 					schedule();
 				}
@@ -123,8 +130,8 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 		//将 m_preemptFlag 复位后，若无新task 就退出、反之进行抢占式调度
 		m_preemptFlag.store(false);
 		volatile const Task* head = NULL;
-		m_taskQueue->front([&](const Task* item){
-			head = item;
+		m_taskQueue->front([&](const void* ptr){
+			head = (const Task*)ptr;
 		});
 		if (head == NULL)
 		{

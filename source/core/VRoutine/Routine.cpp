@@ -38,7 +38,10 @@ Routine& Routine::addDependence(MultiThreadShared* obj, bool bExclusive)
 
 bool Routine::go(Dispatcher* dispatcher)
 {
-	assert(m_task != NULL);
+	if (m_task == NULL)
+	{
+		return false;
+	}
 	if (m_task->schedules().size() != m_deps.size())
 	{
 		m_task->schedules().resize(m_deps.size());

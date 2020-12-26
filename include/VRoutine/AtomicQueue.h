@@ -27,17 +27,32 @@ namespace VictorRoutine
 	public:
 		AtomicQueue(int maxSize) : AtomicQueueBase(maxSize) {}
 		~AtomicQueue(){ }
-		void append(T* item)
+		bool append(T* item)
 		{
 			AtomicQueueItem* begin = new AtomicQueueItem(NULL, item);
+			if (begin == NULL)
+			{
+				return false;
+			}
 			AtomicQueueItem* end = begin;
-			assert(begin != NULL);
 			AtomicQueueBase::append(begin, end, 1);
+			return true;
+		}
+		T* pop()
+		{
+			AtomicQueueItem* item = AtomicQueueBase::pop();
+			if (item == 0)
+			{
+				return NULL;
+			}
+			T* ptr = (T*)item->_ptr;
+			delete item;
+			return ptr;
 		}
 		T* pop(std::function<bool(T*)> filterFunc)
 		{
-			AtomicQueueItem* item = AtomicQueueBase::pop([filterFunc](AtomicQueueItem* item){
-				return filterFunc((T*)item->_ptr);
+			AtomicQueueItem* item = AtomicQueueBase::pop([filterFunc](void* _ptr){
+				return filterFunc((T*)_ptr);
 			}); 
 			if (item == 0)
 			{
@@ -49,8 +64,8 @@ namespace VictorRoutine
 		}
 		void front(std::function<void(const T*)> recver)
 		{
-			AtomicQueueBase::front([recver](const AtomicQueueItem* item){
-				return recver(item ? (T*)(item->_ptr) : NULL);
+			AtomicQueueBase::front([recver](const void* _ptr){
+				return recver((T*)_ptr);
 			});
 		}
 	};

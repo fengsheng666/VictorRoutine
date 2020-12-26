@@ -21,7 +21,7 @@ static RefObject* INVALID_PTR = (RefObject*)(-1);
 
 RefWeak::~RefWeak()
 {
-	assert(m_refStrong.load() == 0);
+	VROUTINE_CHECKER(m_refStrong.load() == 0);
 }
 
 int RefWeak::addRef()
@@ -52,7 +52,7 @@ RefObject* RefWeak::getRefObject()
 		//if m_refStrong==oldStrong set m_refStrong=INVALID_PTR
 		if (m_refStrong.compare_exchange_weak(expected, INVALID_PTR))
 		{
-			assert(expected == oldStrong);
+			VROUTINE_CHECKER(expected == oldStrong);
 			break;
 		}
 		//<<<insert：在此插入“恢复”中断机制
@@ -72,7 +72,7 @@ RefObject* RefWeak::getRefObject()
 		//if oldStrong->m_refCount==strongRefCount set oldStrong->m_refCount++ 即不为零则++
 		if (oldStrong->m_refCount.compare_exchange_weak(expected, strongRefCount + 1))
 		{
-			assert(expected == strongRefCount);
+			VROUTINE_CHECKER(expected == strongRefCount);
 			break;
 		}
 	}

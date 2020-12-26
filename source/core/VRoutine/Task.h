@@ -15,7 +15,9 @@
 #ifndef TASK_H_VROUTINE
 #define TASK_H_VROUTINE
 
+#include <VRoutine/VRoutineDef.h>
 #include <VRoutine/StrongPtr.h>
+#include <VRoutine/inner/AtomicQueueBase.h>
 #include <VRoutine/MultiThreadShared.h>
 #include <vector>
 #include <functional>
@@ -40,24 +42,35 @@ namespace VictorRoutine
 			bool							m_bExclusive;
 		};
 		inline Task(std::function<void()> func)
-			: m_function(func), m_blockPos(-1) { }
+			: m_function(func), m_blockPos(-1), m_queueNode(NULL, this)
+		{
+			m_queueNode._ptr = this;
+		}
 		~Task() { }
+		inline AtomicQueueBase::AtomicQueueItem* getQueueNode()
+		{
+			return &m_queueNode;
+		}
 		inline std::vector<ScheduleInfo>& schedules()
 		{
 			return m_schedules;
 		}
 		inline bool exclusiveOnObject(MultiThreadShared* obj) const
 		{
-			assert(m_blockPos >= 0 && m_blockPos < m_schedules.size());
-			assert(m_schedules[m_blockPos].m_object == obj);
+			VROUTINE_CHECKER(m_blockPos >= 0 && m_blockPos < m_schedules.size());
+			VROUTINE_CHECKER(m_schedules[m_blockPos].m_object == obj);
 			return m_schedules[m_blockPos].m_bExclusive;
 		}
 		bool execute(MultiThreadShared* obj, Dispatcher* dispatcher);
-		
+#if defined(VROUTINE_TASK_POOL_CACHE_COUNT) && (VROUTINE_TASK_POOL_CACHE_COUNT > 0)
+		void* operator new(size_t size);
+		void operator delete(void* ptr);
+#endif //VROUTINE_TASK_POOL_CACHE_COUNT
 	private: 
-		std::function<void()>		m_function;
-		std::vector<ScheduleInfo>	m_schedules;
-		int							m_blockPos;
+		AtomicQueueBase::AtomicQueueItem	m_queueNode;
+		std::function<void()>				m_function;
+		std::vector<ScheduleInfo>			m_schedules;
+		int									m_blockPos;
 	};
 }
 
