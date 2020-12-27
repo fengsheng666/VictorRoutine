@@ -30,6 +30,19 @@ Routine::~Routine()
 	}
 }
 
+void* Routine::operator new(size_t size)
+{
+	return malloc(size);
+}
+
+void Routine::operator delete(void* ptr)
+{
+	if (ptr)
+	{
+		free(ptr);
+	}
+}
+
 Routine& Routine::addDependence(MultiThreadShared* obj, bool bExclusive)
 {
 	m_deps[obj] = bExclusive;

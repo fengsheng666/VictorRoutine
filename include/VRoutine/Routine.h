@@ -33,7 +33,9 @@ namespace VictorRoutine
 		~Routine();
 		Routine& addDependence(MultiThreadShared* obj, bool bExclusive = true);
 		bool go(Dispatcher* dispatcher, int maxDepth = 0);
-
+	private:
+		void* operator new(size_t size);
+		void operator delete(void* ptr);
 	private:
 		std::map<MultiThreadShared*, bool>	m_deps;
 		Task*								m_task;
