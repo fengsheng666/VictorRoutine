@@ -1,4 +1,4 @@
-// Copyright (c) 2020 FengSheng(EN. Victor Fung)
+// Copyright (c) 2020 Feng Sheng(EN. Victor Fung)
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,24 @@ MultiThreadShared::~MultiThreadShared()
 	delete m_taskQueue;
 }
 
+void MultiThreadShared::preempt(Task* task, Dispatcher* dispatcher, int depth)
+{
+	AtomicQueueBase::AtomicQueueItem* ti = task->getQueueNode();
+	VROUTINE_CHECKER(task == ti->_ptr);
+	m_taskQueue->append(ti, ti, 1);
+
+	return schedule(dispatcher, depth + 1);
+}
+
+void MultiThreadShared::release(Dispatcher* dispatcher, int depth)
+{
+	if (m_sharedCount.fetch_sub(1) > 1)
+	{
+		return;
+	}
+
+	return schedule(dispatcher, depth + 1);
+}
 
 void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
 {
@@ -84,19 +102,20 @@ void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
 				Task* item = *iter;
 				if (item == first && depth <= item->getMaxDepth())
 				{
-					bool release_run_task_success = item->execute(currentObject, dispatcher, depth);
-					VROUTINE_CHECKER(release_run_task_success);
+					bool execute_task_success = item->execute(currentObject, dispatcher, depth);
+					VROUTINE_CHECKER(execute_task_success);
 				}
 				else
 				{
 					std::function<void()> func = [item, dispatcher, currentObject, depth](){
-						bool release_run_task_success = item->execute(currentObject, dispatcher, depth);
-						VROUTINE_CHECKER(release_run_task_success);
+						bool execute_task_success = item->execute(currentObject, dispatcher, 0);
+						VROUTINE_CHECKER(execute_task_success);
 					};
 					if (!dispatcher || !dispatcher->post(func))
 					{
 						printf("dispatcher post task fault !!!\n");
-						func();
+						bool execute_task_success = item->execute(currentObject, dispatcher, depth);
+						VROUTINE_CHECKER(execute_task_success);
 					}
 				}
 			}
@@ -129,23 +148,4 @@ void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
 		}
 		pi = m_taskQueue->pop();
 	}
-}
-
-void MultiThreadShared::preempt(Task* task, Dispatcher* dispatcher, int depth)
-{
-	AtomicQueueBase::AtomicQueueItem* ti = task->getQueueNode();
-	VROUTINE_CHECKER(task == ti->_ptr);
-	m_taskQueue->append(ti, ti, 1);
-	
-	return schedule(dispatcher, depth + 1);
-}
-
-void MultiThreadShared::release(Dispatcher* dispatcher, int depth)
-{
-	if (m_sharedCount.fetch_sub(1) > 1)
-	{
-		return;
-	}
-
-	return schedule(dispatcher, depth + 1);
 }

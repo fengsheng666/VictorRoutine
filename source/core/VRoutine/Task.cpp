@@ -1,4 +1,4 @@
-// Copyright (c) 2020 FengSheng(EN. Victor Fung)
+// Copyright (c) 2020 Feng Sheng(EN. Victor Fung)
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,16 +26,8 @@ namespace VictorRoutine
 	{
 	public:
 		TaskPool() 
-		{ 
-			for (int i = 0; i < VROUTINE_TASK_POOL_CACHE_COUNT; i++)
-			{
-				Task* ptr = (Task*)malloc(sizeof(Task));
-				ptr->getQueueNode()->setNext(NULL);
-				ptr->getQueueNode()->_ptr = ptr;
-				VROUTINE_CHECKER(ptr != NULL);
-				dealloc(ptr);
-				g_taskNewCount.fetch_add(1);
-			}
+		{
+
 		}
 		~TaskPool()
 		{

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 FengSheng(EN. Victor Fung)
+// Copyright (c) 2020 Feng Sheng(EN. Victor Fung)
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ namespace VictorRoutine
 		//返回 false 就绪成功但执行延期，true 就绪成功且可立即执行
 		void preempt(Task* task, Dispatcher* dispatcher, int depth);
 		void release(Dispatcher* dispatcher, int depth);
-	private:
 		void schedule(Dispatcher* dispatcher, int depth);
 	private:
 		TaskQueue*			m_taskQueue;
