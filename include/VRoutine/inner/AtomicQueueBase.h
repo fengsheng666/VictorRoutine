@@ -46,17 +46,15 @@ namespace VictorRoutine
 			void*							_ptr;
 		};
 		~AtomicQueueBase();
-		bool append(AtomicQueueItem* begin, AtomicQueueItem* end, int length);
+		void append(AtomicQueueItem* begin, AtomicQueueItem* end, int length);
 		AtomicQueueItem* pop();
 		AtomicQueueItem* pop(std::function<bool(void*)> filterFunc);
 		void front(std::function<void(const void*)> recver);
 	protected:
-		AtomicQueueBase(int maxSize);
+		AtomicQueueBase();
 	private:
-		const int						m_maxSize;
 		std::atomic<AtomicQueueItem*>	m_head;
 		std::atomic<AtomicQueueItem*>	m_tail;
-		std::atomic<int>				m_size;
 	};
 }
 

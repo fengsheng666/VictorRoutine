@@ -25,7 +25,7 @@ namespace VictorRoutine
 	class TaskPool : public AtomicQueueBase
 	{
 	public:
-		TaskPool() : AtomicQueueBase(0)
+		TaskPool() 
 		{ 
 			for (int i = 0; i < VROUTINE_TASK_POOL_CACHE_COUNT; i++)
 			{

@@ -1,5 +1,5 @@
 #编译demo
-OPTION(BUILD_normal_scene "Buile the normal_scene of cmake of VictorRoutine" OFF)
-IF(BUILD_normal_scene)
-	ADD_SUBDIRECTORY(normal_scene)
+OPTION(BUILD_demo_normal "Buile the demo_normal of cmake of VictorRoutine" OFF)
+IF(BUILD_demo_normal)
+	ADD_SUBDIRECTORY(demo_normal)
 ENDIF()

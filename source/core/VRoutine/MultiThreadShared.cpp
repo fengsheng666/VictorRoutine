@@ -23,8 +23,7 @@ namespace VictorRoutine
 	class TaskQueue : public AtomicQueueBase
 	{
 	public:
-		TaskQueue() 
-			: AtomicQueueBase(VROUTINE_TASK_QUEUE_MAX_LENGTH) { }
+		TaskQueue() { }
 		~TaskQueue(){ }
 	};
 }
@@ -136,7 +135,7 @@ void MultiThreadShared::preempt(Task* task, Dispatcher* dispatcher, int depth)
 {
 	AtomicQueueBase::AtomicQueueItem* ti = task->getQueueNode();
 	VROUTINE_CHECKER(task == ti->_ptr);
-	while (!m_taskQueue->append(ti, ti, 1)) { }
+	m_taskQueue->append(ti, ti, 1);
 	
 	return schedule(dispatcher, depth + 1);
 }

@@ -1,5 +1,5 @@
 # 设置模块名称
-SET(MODULE_NAME	normal_test)
+SET(MODULE_NAME	test_queue)
 
 # 将导出头文件归组
 FILE(GLOB_RECURSE ROOT_HEADERS 

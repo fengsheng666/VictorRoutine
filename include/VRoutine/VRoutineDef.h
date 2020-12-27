@@ -37,10 +37,8 @@ static inline void vroutine_check(bool stat, const char* err, const char* filena
 
 #define VROUTINE_CHECKER(_Expression)	vroutine_check((_Expression),#_Expression,__FILE__,__LINE__)
 
-#define VROUTINE_TASK_POOL_CACHE_COUNT	(0)
-
 #define VROUTINE_ACTIVE_TASK_MAX_COUNT	(0)
 
-#define VROUTINE_TASK_QUEUE_MAX_LENGTH	(0)
+#define VROUTINE_TASK_POOL_CACHE_COUNT	(0)
 
 #endif

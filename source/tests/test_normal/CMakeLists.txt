@@ -1,5 +1,5 @@
 # 设置模块名称
-SET(MODULE_NAME	normal_scene)
+SET(MODULE_NAME	test_normal)
 
 # 将导出头文件归组
 FILE(GLOB_RECURSE ROOT_HEADERS 
@@ -21,7 +21,7 @@ ADD_EXECUTABLE(${MODULE_NAME}
 			${ROOT_SOURCES} 
 )
 set_target_properties(${MODULE_NAME} 
-				PROPERTIES FOLDER Demo
+				PROPERTIES FOLDER Tests
 )
 
 # 添加内部库

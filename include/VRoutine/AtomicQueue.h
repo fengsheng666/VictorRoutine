@@ -18,6 +18,7 @@
 #include "./VRoutineDef.h"
 #include "./inner/AtomicQueueBase.h"
 #include <list>
+#include <atomic>
 
 namespace VictorRoutine
 {
@@ -25,7 +26,10 @@ namespace VictorRoutine
 	class AtomicQueue : public AtomicQueueBase
 	{
 	public:
-		AtomicQueue(int maxSize) : AtomicQueueBase(maxSize) {}
+		AtomicQueue(int maxSize) : m_maxSize(maxSize) 
+		{
+			m_size.store(0);
+		}
 		~AtomicQueue(){ }
 		bool append(T* item)
 		{
@@ -35,6 +39,11 @@ namespace VictorRoutine
 				return false;
 			}
 			AtomicQueueItem* end = begin;
+			if (m_maxSize > 0 && m_size.fetch_add(1) + 1 > m_maxSize)
+			{
+				m_size.fetch_sub(1);
+				return false;
+			}
 			AtomicQueueBase::append(begin, end, 1);
 			return true;
 		}
@@ -45,6 +54,7 @@ namespace VictorRoutine
 			{
 				return NULL;
 			}
+			m_size.fetch_sub(1);
 			T* ptr = (T*)item->_ptr;
 			delete item;
 			return ptr;
@@ -58,6 +68,7 @@ namespace VictorRoutine
 			{
 				return NULL;
 			}
+			m_size.fetch_sub(1);
 			T* ptr = (T*)item->_ptr;
 			delete item;
 			return ptr;
@@ -68,6 +79,9 @@ namespace VictorRoutine
 				return recver((T*)_ptr);
 			});
 		}
+	private:
+		const int			m_maxSize;
+		std::atomic<int>	m_size;
 	};
 }
 
