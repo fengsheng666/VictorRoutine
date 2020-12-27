@@ -30,6 +30,15 @@ Routine::~Routine()
 	}
 }
 
+Routine& Routine::setMaxDepth(int maxDepth)
+{
+	if (m_task)
+	{
+		m_task->setMaxDepth(maxDepth);
+	}
+	return *this;
+}
+
 Routine& Routine::addDependence(MultiThreadShared* obj, bool bExclusive)
 {
 	m_deps[obj] = bExclusive;
@@ -42,6 +51,10 @@ bool Routine::go(Dispatcher* dispatcher)
 	{
 		return false;
 	}
+	if (m_task->getMaxDepth() <= 0)
+	{
+		m_task->setMaxDepth(m_deps.size());
+	}
 	if (m_task->schedules().size() != m_deps.size())
 	{
 		m_task->schedules().resize(m_deps.size());
@@ -52,7 +65,7 @@ bool Routine::go(Dispatcher* dispatcher)
 			(m_task->schedules())[i].m_bExclusive = iter->second;
 		}
 	}
-	if (m_task->execute(NULL, dispatcher))
+	if (m_task->execute(NULL, dispatcher, 0))
 	{
 		m_task = NULL;
 		return true;

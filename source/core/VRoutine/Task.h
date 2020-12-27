@@ -51,6 +51,14 @@ namespace VictorRoutine
 		{
 			return &m_queueNode;
 		}
+		inline int getMaxDepth() const
+		{
+			return m_maxDepth;
+		}
+		inline void setMaxDepth(int depth)
+		{
+			m_maxDepth = depth;
+		}
 		inline std::vector<ScheduleInfo>& schedules()
 		{
 			return m_schedules;
@@ -61,7 +69,7 @@ namespace VictorRoutine
 			VROUTINE_CHECKER(m_schedules[m_blockPos].m_object == obj);
 			return m_schedules[m_blockPos].m_bExclusive;
 		}
-		bool execute(MultiThreadShared* obj, Dispatcher* dispatcher);
+		bool execute(MultiThreadShared* obj, Dispatcher* dispatcher, int depth);
 #if defined(VROUTINE_TASK_POOL_CACHE_COUNT) && (VROUTINE_TASK_POOL_CACHE_COUNT > 0)
 		void* operator new(size_t size);
 		void operator delete(void* ptr);
@@ -71,6 +79,7 @@ namespace VictorRoutine
 		std::function<void()>				m_function;
 		std::vector<ScheduleInfo>			m_schedules;
 		int									m_blockPos;
+		int									m_maxDepth;
 	};
 }
 

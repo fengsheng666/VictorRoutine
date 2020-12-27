@@ -29,6 +29,8 @@ AtomicQueueBase::AtomicQueueBase(int maxSize) : m_maxSize(maxSize)
 AtomicQueueBase::~AtomicQueueBase()
 {
 	//VROUTINE_CHECKER(m_head.load() == NULL);
+	//VROUTINE_CHECKER(m_tail.load() == NULL);
+	//VROUTINE_CHECKER(m_size.load() == 0);
 }
 
 bool AtomicQueueBase::append(AtomicQueueItem* begin, AtomicQueueItem* end, int length)
@@ -58,10 +60,6 @@ bool AtomicQueueBase::append(AtomicQueueItem* begin, AtomicQueueItem* end, int l
 	AtomicQueueItem* old = m_tail.exchange(end);
 	if (0 == old)
 	{
-		if (begin == NULL)
-		{
-			abort();
-		}
 		AtomicQueueItem* oldHead = m_head.exchange(begin);
 		//<<<insert：在此插入“恢复”中断机制
 		VROUTINE_CHECKER(oldHead == NULL || oldHead == INVALID_PTR);
@@ -92,7 +90,8 @@ AtomicQueueBase::AtomicQueueItem* AtomicQueueBase::pop()
 		{
 			AtomicQueueItem* next = head->_next.load();
 			//此时m_head == INVALID_PTR || m_head == NULL
-			m_head.store(next);
+			AtomicQueueItem* ptr = m_head.exchange(next);
+			VROUTINE_CHECKER(ptr == INVALID_PTR || ptr == NULL);
 			//<<<insert：在此插入“恢复”中断机制
 			m_size.fetch_sub(1);
 			if (next != NULL)
@@ -136,13 +135,15 @@ AtomicQueueBase::AtomicQueueItem* AtomicQueueBase::pop(std::function<bool(void*)
 		{
 			if (!filterFunc(head->_ptr))
 			{
-				m_head.store(head);
+				AtomicQueueItem* ptr = m_head.exchange(head);
+				VROUTINE_CHECKER(ptr == INVALID_PTR || ptr == NULL);
 				//<<<insert：在此插入“恢复”中断机制
 				return NULL;
 			}
 			AtomicQueueItem* next = head->_next.load();
 			//此时m_head == INVALID_PTR || m_head == NULL
-			m_head.store(next);
+			AtomicQueueItem* ptr = m_head.exchange(next);
+			VROUTINE_CHECKER(ptr == INVALID_PTR || ptr == NULL);
 			//<<<insert：在此插入“恢复”中断机制
 			m_size.fetch_sub(1);
 			if (next != NULL)
@@ -187,7 +188,8 @@ void AtomicQueueBase::front(std::function<void(const void*)> recver)
 		{
 			recver(head->_ptr);
 			//此时m_head == INVALID_PTR || m_head == NULL
-			m_head.store(head);
+			AtomicQueueItem* ptr = m_head.exchange(head);
+			VROUTINE_CHECKER(ptr == INVALID_PTR || ptr == NULL);
 			return;
 		}
 	}

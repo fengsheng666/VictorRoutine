@@ -42,41 +42,17 @@ MultiThreadShared::~MultiThreadShared()
 	delete m_taskQueue;
 }
 
-bool MultiThreadShared::preempt(Task* task)
+
+void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
 {
-	AtomicQueueBase::AtomicQueueItem* ti = task->getQueueNode();
-	VROUTINE_CHECKER(task == ti->_ptr);
-	while (!m_taskQueue->append(ti, ti, 1)) { }
-	volatile const Task* head = NULL;
-	m_taskQueue->front([&](const void* ptr){
-		head = (const Task*)ptr;
-	});
-	if (head != task)
-	{
-		return false;
-	}
 	bool expected = false;
 	if (!m_preemptFlag.compare_exchange_strong(expected, true))
 	{
-		return false;
-	}
-	m_sharedCount.fetch_add(1);
-	Task* item = (Task*)m_taskQueue->pop()->_ptr;
-	VROUTINE_CHECKER(item == task);
-	return true;
-}
-
-void MultiThreadShared::release(Dispatcher* dispatcher)
-{
-	if (m_sharedCount.fetch_sub(1) > 1)
-	{
 		return;
 	}
-
-	bool expected = false;
-	do 
+	AtomicQueueBase::AtomicQueueItem* pi = m_taskQueue->pop();
+	while (true)
 	{
-		AtomicQueueBase::AtomicQueueItem* pi = m_taskQueue->pop();
 		Task* first = (pi ? (Task*)pi->_ptr : NULL);
 		if (first)
 		{
@@ -92,43 +68,53 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 				m_sharedCount.fetch_add(1);
 				tasks.push_back(first);
 				for (AtomicQueueBase::AtomicQueueItem* next = m_taskQueue->pop([currentObject](void* ptr){
-						return ((Task*)ptr)->exclusiveOnObject(currentObject) == false;});
-					next != NULL;
+					return ((Task*)ptr)->exclusiveOnObject(currentObject) == false; });
+						next != NULL;
 					next = m_taskQueue->pop([currentObject](void* ptr){
 						return ((Task*)ptr)->exclusiveOnObject(currentObject) == false; }))
 				{
 					tasks.push_back((Task*)next->_ptr);
 					m_sharedCount.fetch_add(1);
 				}
-				
+
 			}
-			
+
 			std::list<Task*>::const_iterator iter = tasks.begin();
 			for (; iter != tasks.end(); iter++)
 			{
 				Task* item = *iter;
-				std::function<void()> schedule = [item, dispatcher, currentObject](){
-					bool task_run_success = item->execute(currentObject, dispatcher);
-					VROUTINE_CHECKER(task_run_success);
-				};
-				if (dispatcher)
+				if (item == first && depth <= item->getMaxDepth())
 				{
-					if (!dispatcher->post(schedule))
-					{
-						printf("dispatcher post task fault !!!\n");
-						schedule();
-					}
+					bool release_run_task_success = item->execute(currentObject, dispatcher, depth);
+					VROUTINE_CHECKER(release_run_task_success);
 				}
 				else
 				{
-					schedule();
+					std::function<void()> func = [item, dispatcher, currentObject, depth](){
+						bool release_run_task_success = item->execute(currentObject, dispatcher, depth);
+						VROUTINE_CHECKER(release_run_task_success);
+					};
+					if (!dispatcher || !dispatcher->post(func))
+					{
+						printf("dispatcher post task fault !!!\n");
+						func();
+					}
 				}
 			}
-			
+
+			int sharedCount = m_sharedCount.load();
+			if (sharedCount == 0)
+			{
+				pi = m_taskQueue->pop();
+				continue;
+			}
+			VROUTINE_CHECKER(sharedCount >= 0);
+		}
+		m_preemptFlag.store(false);
+		if (m_sharedCount.load() > 0)
+		{
 			return;
 		}
-		//将 m_preemptFlag 复位后，若无新task 就退出、反之进行抢占式调度
-		m_preemptFlag.store(false);
 		volatile const Task* head = NULL;
 		m_taskQueue->front([&](const void* ptr){
 			head = (const Task*)ptr;
@@ -138,5 +124,29 @@ void MultiThreadShared::release(Dispatcher* dispatcher)
 			return;
 		}
 		expected = false;
-	} while (m_preemptFlag.compare_exchange_strong(expected, true));
+		if (!m_preemptFlag.compare_exchange_strong(expected, true))
+		{
+			return;
+		}
+		pi = m_taskQueue->pop();
+	}
+}
+
+void MultiThreadShared::preempt(Task* task, Dispatcher* dispatcher, int depth)
+{
+	AtomicQueueBase::AtomicQueueItem* ti = task->getQueueNode();
+	VROUTINE_CHECKER(task == ti->_ptr);
+	while (!m_taskQueue->append(ti, ti, 1)) { }
+	
+	return schedule(dispatcher, depth + 1);
+}
+
+void MultiThreadShared::release(Dispatcher* dispatcher, int depth)
+{
+	if (m_sharedCount.fetch_sub(1) > 1)
+	{
+		return;
+	}
+
+	return schedule(dispatcher, depth + 1);
 }

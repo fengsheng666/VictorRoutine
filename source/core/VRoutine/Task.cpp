@@ -102,7 +102,7 @@ void Task::operator delete(void* ptr)
 static std::atomic<int> g_suspendCount(0);
 #endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
 
-bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher)
+bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher, int depth)
 {
 	if (obj != NULL)
 	{
@@ -126,21 +126,19 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher)
 		}
 #endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
 	}
-	for (m_blockPos++; m_blockPos < m_schedules.size(); m_blockPos++)
+
+	m_blockPos++;
+	if (m_blockPos < m_schedules.size())
 	{
-		bool preempted = 
-			m_schedules[m_blockPos].m_object->preempt(this);
-		if (!preempted)
-		{
-			return true;
-		}
+		m_schedules[m_blockPos].m_object->preempt(this, dispatcher, depth);
+		return true;
 	}
 
 	m_function();
 
 	for (int pos = m_schedules.size() - 1; pos >= 0; pos--)
 	{
-		m_schedules[pos].m_object->release(dispatcher);
+		m_schedules[pos].m_object->release(dispatcher, depth);
 	}
 
 #if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)
