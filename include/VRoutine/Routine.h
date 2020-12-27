@@ -31,9 +31,8 @@ namespace VictorRoutine
 	public:
 		Routine(std::function<void()> func);
 		~Routine();
-		Routine& setMaxDepth(int maxDepth);
 		Routine& addDependence(MultiThreadShared* obj, bool bExclusive = true);
-		bool go(Dispatcher* dispatcher);
+		bool go(Dispatcher* dispatcher, int maxDepth = 0);
 
 	private:
 		std::map<MultiThreadShared*, bool>	m_deps;

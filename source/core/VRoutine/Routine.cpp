@@ -30,28 +30,19 @@ Routine::~Routine()
 	}
 }
 
-Routine& Routine::setMaxDepth(int maxDepth)
-{
-	if (m_task)
-	{
-		m_task->setMaxDepth(maxDepth);
-	}
-	return *this;
-}
-
 Routine& Routine::addDependence(MultiThreadShared* obj, bool bExclusive)
 {
 	m_deps[obj] = bExclusive;
 	return *this;
 }
 
-bool Routine::go(Dispatcher* dispatcher)
+bool Routine::go(Dispatcher* dispatcher, int maxDepth)
 {
 	if (m_task == NULL)
 	{
 		return false;
 	}
-	if (m_task->getMaxDepth() <= 0)
+	if (maxDepth <= 0)
 	{
 		m_task->setMaxDepth(m_deps.size());
 	}

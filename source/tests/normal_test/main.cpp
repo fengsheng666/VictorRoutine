@@ -182,7 +182,7 @@ long long caculateTimes(int threadNum, int dataNum, int forCount, bool runOnRout
 								std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 							ticks.fetch_add(1);
 						}
-					}).setMaxDepth(128).addDependence(sd, true).go(dptr);
+					}).addDependence(sd, true).go(dptr, 128);
 					if (!suc)
 					{
 						printf("Routine go fault!\n");
@@ -225,11 +225,11 @@ int main(int argc, char* argv[])
 	//threadNum个线程执行：	竞争dataNum个数据，对每个数据执行forCount次修改
 	//						共dataNum * forCount个请求
 	int threadNum = 8;
-	int dataNum = 16;
-	int forCount = 1024 * 64;
+	int dataNum = 64;
+	int forCount = 1024 * 16;
 
 	//统计statisticTimes次 求平均时间消耗
-	long long statisticTimes = 8;
+	long long statisticTimes = 16;
 
 	long long timeBegin = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();

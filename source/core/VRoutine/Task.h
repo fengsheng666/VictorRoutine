@@ -42,7 +42,7 @@ namespace VictorRoutine
 			bool							m_bExclusive;
 		};
 		inline Task(std::function<void()> func)
-			: m_function(func), m_blockPos(-1), m_queueNode(NULL, this)
+			: m_function(func), m_blockPos(-1), m_queueNode(NULL, this), m_maxDepth(1)
 		{
 			m_queueNode._ptr = this;
 		}
