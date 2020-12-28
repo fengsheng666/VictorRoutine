@@ -91,7 +91,7 @@ void Task::operator delete(void* ptr)
 #endif //VROUTINE_TASK_POOL_CACHE_COUNT
 
 #if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)
-static std::atomic<int> g_suspendCount(0);
+static std::atomic<int> g_activeCount(0);
 #endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
 
 bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher, int depth)
@@ -104,10 +104,10 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher, int depth)
 	else
 	{
 #if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)
-		int oldCount = g_suspendCount.fetch_add(1);
+		int oldCount = g_activeCount.fetch_add(1);
 		if (oldCount + 1 > VROUTINE_ACTIVE_TASK_MAX_COUNT)
 		{
-			g_suspendCount.fetch_sub(1);
+			g_activeCount.fetch_sub(1);
 			return false;
 		}
 #endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
@@ -128,7 +128,7 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher, int depth)
 	}
 
 #if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)
-	g_suspendCount.fetch_sub(1);
+	g_activeCount.fetch_sub(1);
 #endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
 	delete this;
 	return true;
