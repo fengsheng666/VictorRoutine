@@ -46,7 +46,7 @@ namespace VictorRoutine
 		{
 			VROUTINE_CHECKER(ptr != NULL);
 			AtomicQueueItem* item = ptr->getQueueNode();
-			while (!AtomicQueueBase::append(item, item, 1)){}
+			AtomicQueueBase::append(item, item, 1);
 		}
 	};
 }
@@ -104,17 +104,11 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher, int depth)
 	else
 	{
 #if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)
-		int expected = g_suspendCount.load();
-		for(; true; expected = g_suspendCount.load()) 
+		int oldCount = g_suspendCount.fetch_add(1);
+		if (oldCount + 1 > VROUTINE_ACTIVE_TASK_MAX_COUNT)
 		{
-			if (expected + 1 > VROUTINE_ACTIVE_TASK_MAX_COUNT)
-			{
-				return false;
-			}
-			if (g_suspendCount.compare_exchange_weak(expected, expected + 1))
-			{
-				break;
-			}
+			g_suspendCount.fetch_sub(1);
+			return false;
 		}
 #endif // VROUTINE_ACTIVE_TASK_MAX_COUNT
 	}
