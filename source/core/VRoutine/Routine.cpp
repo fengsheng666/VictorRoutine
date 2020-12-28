@@ -111,6 +111,7 @@ namespace VictorRoutine
 	private:
 		static void ExecuteThread(StrongPtr<DefaultDispatcher> dp)
 		{
+			long long yield_time = 0; 
 			DispatcherQueue::FuncInfo* fi = dp->m_funcQueue.pop();
 			while (true)
 			{
@@ -119,17 +120,38 @@ namespace VictorRoutine
 					fi->_function();
 					delete fi;
 				}
-				dp->m_execCount.fetch_sub(1);
+				int oldCount = dp->m_execCount.fetch_sub(1);
 
-				std::this_thread::yield(); //ÇÐ³öcpu
+				bool null_break = true;
+				if (oldCount <= VROUTINE_DISPATCH_THREAD_COUNT)
+				{
+					long long current_time = 
+						std::chrono::duration_cast<std::chrono::milliseconds>(
+						std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+					if (yield_time != 0)
+					{
+						null_break = ((current_time - yield_time) > 1000);
+					}
+					else
+					{
+						yield_time = current_time;
+					}
+				}
+
+				if (null_break)
+				{
+					std::this_thread::yield();
+				}
 
 				fi = dp->m_funcQueue.pop();
-				if (fi == NULL)
+				if (fi == NULL && null_break)
 				{
 					break;
 				}
 				dp->m_execCount.fetch_add(1);
-			}
+				yield_time = 0;
+
+			} // while (true)
 			dp->m_threadNum.fetch_sub(1);
 		}
 	private:
