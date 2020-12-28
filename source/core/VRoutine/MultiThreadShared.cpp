@@ -113,7 +113,10 @@ void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
 					};
 					if (!dispatcher || !dispatcher->post(func))
 					{
-						printf("dispatcher post task fault !!!\n");
+						if (depth > item->getMaxDepth())
+						{
+							printf("task execute in too depth : %d !!!\n", depth);
+						}
 						bool execute_task_success = item->execute(currentObject, dispatcher, depth);
 						VROUTINE_CHECKER(execute_task_success);
 					}

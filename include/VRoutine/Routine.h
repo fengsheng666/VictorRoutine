@@ -32,7 +32,11 @@ namespace VictorRoutine
 		Routine(std::function<void()> func);
 		~Routine();
 		Routine& addDependence(MultiThreadShared* obj, bool bExclusive = true);
-		bool go(Dispatcher* dispatcher, int maxDepth = 0);
+		inline bool go(Dispatcher* dispatcher = NULL)
+		{
+			return this->go(dispatcher, 0);
+		}
+		bool go(Dispatcher* dispatcher, int maxDepth);
 	private:
 		void* operator new(size_t size);
 		void operator delete(void* ptr);

@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 	int forCount = 1024 * 16;
 
 	//统计statisticTimes次 求平均时间消耗
-	long long statisticTimes = 10000;
+	long long statisticTimes = 1000;
 
 	long long timeBegin = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::high_resolution_clock::now().time_since_epoch()).count();

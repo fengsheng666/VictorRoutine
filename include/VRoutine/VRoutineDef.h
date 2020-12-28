@@ -41,4 +41,6 @@ static inline void vroutine_check(bool stat, const char* err, const char* filena
 
 #define VROUTINE_TASK_POOL_CACHE_COUNT	(0)
 
+#define VROUTINE_DISPATCH_THREAD_COUNT	(0)
+
 #endif
