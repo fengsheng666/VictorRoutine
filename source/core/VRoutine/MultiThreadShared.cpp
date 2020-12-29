@@ -52,12 +52,11 @@ void MultiThreadShared::preempt(Task* task, Dispatcher* dispatcher, int depth)
 
 void MultiThreadShared::release(Dispatcher* dispatcher, int depth)
 {
-	if (m_sharedCount.fetch_sub(1) > 1)
+	if (m_sharedCount.fetch_sub(1) == 1)
 	{
-		return;
+		m_preemptFlag.store(false);
+		schedule(dispatcher, depth + 1);
 	}
-
-	return schedule(dispatcher, depth + 1);
 }
 
 void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
@@ -67,6 +66,8 @@ void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
 	{
 		return;
 	}
+	int oldCount = m_sharedCount.fetch_add(1);
+	VROUTINE_CHECKER(oldCount == 0);
 	AtomicQueueBase::AtomicQueueItem* pi = m_taskQueue->pop();
 	while (true)
 	{
@@ -124,18 +125,23 @@ void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
 			}
 
 			int sharedCount = m_sharedCount.load();
-			if (sharedCount == 0)
+			if (sharedCount == 1)
 			{
 				pi = m_taskQueue->pop();
 				continue;
 			}
-			VROUTINE_CHECKER(sharedCount >= 0);
-		}
-		m_preemptFlag.store(false);
-		if (m_sharedCount.load() > 0)
+			VROUTINE_CHECKER(sharedCount >= 1);
+		} 
+
+		if (m_sharedCount.fetch_sub(1) > 1) //还有只读的task在其他线程执行
 		{
 			return;
+		} 
+		else
+		{
+			m_preemptFlag.store(false);
 		}
+
 		volatile const Task* head = NULL;
 		m_taskQueue->front([&](const void* ptr){
 			head = (const Task*)ptr;
@@ -150,5 +156,7 @@ void MultiThreadShared::schedule(Dispatcher* dispatcher, int depth)
 			return;
 		}
 		pi = m_taskQueue->pop();
+		int oldCount = m_sharedCount.fetch_add(1);
+		VROUTINE_CHECKER(oldCount == 0);
 	}
 }
