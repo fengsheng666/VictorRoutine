@@ -73,10 +73,8 @@ namespace VictorRoutine
 	class DefaultDispatcher : public Dispatcher, public RefObject
 	{
 	public:
-		
 		DefaultDispatcher()
 		{
-			m_execCount.store(0);
 			m_threadNum.store(0);
 		}
 		~DefaultDispatcher() { }
@@ -94,24 +92,23 @@ namespace VictorRoutine
 			{
 				return false;
 			}
-			int oldCount = m_execCount.fetch_add(1);
+			int oldCount = m_threadNum.fetch_add(1);
 			if (oldCount + 1 <= VROUTINE_DISPATCH_THREAD_COUNT)
 			{
-				m_threadNum.fetch_add(1);
 				StrongPtr<DefaultDispatcher> dp = this;
 				std::thread background_thread(ExecuteThread, dp);
 				background_thread.detach();
 			}
 			else
 			{
-				m_execCount.fetch_sub(1);
+				m_threadNum.fetch_sub(1);
 			}
 			return true;
 		}
 	private:
 		static void ExecuteThread(StrongPtr<DefaultDispatcher> dp)
 		{
-			long long yield_time = 0; 
+			long long spin_time = 0; 
 			DispatcherQueue::FuncInfo* fi = dp->m_funcQueue.pop();
 			while (true)
 			{
@@ -120,7 +117,7 @@ namespace VictorRoutine
 					fi->_function();
 					delete fi;
 				}
-				int oldCount = dp->m_execCount.fetch_sub(1);
+				int oldCount = dp->m_threadNum.fetch_sub(1);
 
 				bool null_break = true;
 				if (oldCount <= VROUTINE_DISPATCH_THREAD_COUNT)
@@ -128,19 +125,14 @@ namespace VictorRoutine
 					long long current_time = 
 						std::chrono::duration_cast<std::chrono::milliseconds>(
 						std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-					if (yield_time != 0)
+					if (spin_time != 0)
 					{
-						null_break = ((current_time - yield_time) > 1000);
+						null_break = ((current_time - spin_time) > 1000);
 					}
 					else
 					{
-						yield_time = current_time;
+						spin_time = current_time;
 					}
-				}
-
-				if (null_break)
-				{
-					std::this_thread::yield();
 				}
 
 				fi = dp->m_funcQueue.pop();
@@ -148,17 +140,13 @@ namespace VictorRoutine
 				{
 					break;
 				}
-				dp->m_execCount.fetch_add(1);
-				yield_time = 0;
+				dp->m_threadNum.fetch_add(1);
+				spin_time = 0;
 
 			} // while (true)
-			dp->m_threadNum.fetch_sub(1);
 		}
 	private:
 		DispatcherQueue		m_funcQueue;
-		//m_execCount >= m_threadNum
-		std::atomic<int>	m_execCount;
-
 		std::atomic<int>	m_threadNum;
 	};
 	class DefaultDispatcherWrapper
