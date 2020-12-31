@@ -124,7 +124,7 @@ bool Task::execute(MultiThreadShared* obj, Dispatcher* dispatcher, int depth)
 
 	for (int pos = m_schedules.size() - 1; pos >= 0; pos--)
 	{
-		m_schedules[pos].m_object->release(dispatcher, depth);
+		m_schedules[pos].m_object->release(m_schedules[pos].m_bExclusive, dispatcher, depth);
 	}
 
 #if defined(VROUTINE_ACTIVE_TASK_MAX_COUNT) && (VROUTINE_ACTIVE_TASK_MAX_COUNT > 0)

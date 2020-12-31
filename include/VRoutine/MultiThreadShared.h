@@ -35,8 +35,8 @@ namespace VictorRoutine
 		//先将task插入无锁队列，再置位
 		//返回 false 就绪成功但执行延期，true 就绪成功且可立即执行
 		void preempt(Task* task, Dispatcher* dispatcher, int depth);
-		void release(Dispatcher* dispatcher, int depth);
-		void schedule(Dispatcher* dispatcher, int depth);
+		void release(bool bExclusive, Dispatcher* dispatcher, int depth);
+		bool schedule(Dispatcher* dispatcher, int depth);
 	private:
 		TaskQueue*			m_taskQueue;
 		std::atomic<bool>	m_preemptFlag;

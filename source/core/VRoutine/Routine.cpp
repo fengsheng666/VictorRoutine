@@ -19,6 +19,8 @@
 #include <VRoutine/Dispatcher.h>
 #include <VRoutine/Routine.h>
 
+#define VROUTINE_DISPATCH_THREAD_COUNT	(1)
+
 #if defined(VROUTINE_DISPATCH_THREAD_COUNT) && (VROUTINE_DISPATCH_THREAD_COUNT > 0)
 namespace VictorRoutine
 {
@@ -54,6 +56,7 @@ namespace VictorRoutine
 			{
 				return false;
 			}
+			printf("task posted to the default dispatch thread!!!\n");
 			fi->_function = func;
 			AtomicQueueBase::append(&fi->_queueNode, &fi->_queueNode, 1);
 			return true;
