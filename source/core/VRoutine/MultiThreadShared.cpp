@@ -31,9 +31,17 @@ namespace VictorRoutine
 	public:
 		struct ThreadInfo
 		{
-			ThreadInfo() : _queueNode(NULL, this) { }
+			ThreadInfo() : _queueNode(NULL, this) 
+			{ 
+				_task = NULL;
+				_object = NULL;
+				_dispatcher = NULL;
+
+				_tptr = NULL;
+			}
 			AtomicQueueBase::AtomicQueueItem	_queueNode;
 
+			void*								_tptr;
 			std::mutex							_mutex;
 			std::condition_variable				_cond;
 
@@ -44,7 +52,6 @@ namespace VictorRoutine
 		ParallelThreadPool()
 		{
 			m_runFlag.store(true);
-			m_thredNum.store(VROUTINE_PARALLEL_THREAD_COUNT);
 		}
 		~ParallelThreadPool()
 		{
@@ -60,15 +67,12 @@ namespace VictorRoutine
 					printf("startup parallel thread %d fault!!!\n", i);
 					continue;
 				}
-				StrongPtr<ParallelThreadPool> pool = this;
-				std::thread background_thread(ParallelThread, pool, ti);
-				background_thread.detach();
+				ParallelThreadPool::append(&ti->_queueNode, &ti->_queueNode, 1);
 			}
 		}
 		void shutdown()
 		{
 			m_runFlag.store(false);
-
 			while (m_thredNum.load() > 0)
 			{
 				printf("wait parallel thread exit!!!\n");
@@ -88,12 +92,22 @@ namespace VictorRoutine
 				return false;
 			}
 			ThreadInfo* ti = (ThreadInfo*)item->_ptr;
-			ti->_task = task;
+
+			ti->_mutex.lock();
 			ti->_object = _obj;
 			ti->_dispatcher = dsp;
+			ti->_task = task;
+			void* tptr = ti->_tptr;
+			tptr ? ti->_cond.notify_all() : (ti->_tptr = ti);
+			ti->_mutex.unlock();
 
-			std::unique_lock<std::mutex> lck(ti->_mutex);
-			ti->_cond.notify_one();
+			if (NULL == tptr)
+			{
+				StrongPtr<ParallelThreadPool> pool = this;
+				m_thredNum.fetch_add(1);
+				std::thread background_thread(ParallelThread, pool, ti);
+				background_thread.detach();
+			}
 			return true;
 		}
 	private:
@@ -102,18 +116,29 @@ namespace VictorRoutine
 			while (pool->m_runFlag.load())
 			{
 				std::unique_lock<std::mutex> lck(ti->_mutex);
-				pool->append(&ti->_queueNode, &ti->_queueNode, 1);
-				ti->_cond.wait(lck);
-				if (!pool->m_runFlag.load())
+				if (NULL == ti->_task)
+				{
+					pool->append(&ti->_queueNode, &ti->_queueNode, 1);
+					//std::cv_status stat = ti->_cond.wait_for(lck, std::chrono::seconds(1));
+					//if (stat == std::cv_status::timeout)
+					//{
+					//	ti->_tptr = NULL;
+					//}
+					ti->_cond.wait(lck);
+				}
+				if (NULL != ti->_task)
+				{
+					VROUTINE_CHECKER(ti->_object != NULL);
+					bool execute_task_success = ti->_task->execute(ti->_object, ti->_dispatcher, 0);
+					VROUTINE_CHECKER(execute_task_success);
+				}
+				ti->_object = NULL;
+				ti->_dispatcher = NULL;
+				ti->_task = NULL;
+				if (NULL == ti->_tptr)
 				{
 					break;
 				}
-				VROUTINE_CHECKER(ti->_task != NULL && ti->_object != NULL);
-				bool execute_task_success = ti->_task->execute(ti->_object, ti->_dispatcher, 0);
-				VROUTINE_CHECKER(execute_task_success);
-				ti->_task = NULL;
-				ti->_object = NULL;
-				ti->_dispatcher = NULL;
 			}
 			pool->m_thredNum.fetch_sub(1);
 		}
@@ -124,7 +149,12 @@ namespace VictorRoutine
 	class ParallelThreadPoolWrapper
 	{
 	public:
-		ParallelThreadPoolWrapper() { }
+		ParallelThreadPoolWrapper() 
+		{
+			m_pool = new ParallelThreadPool;
+			VROUTINE_CHECKER(m_pool.get() != NULL);
+			m_pool->startup();
+		}
 		~ParallelThreadPoolWrapper()
 		{
 			if (m_pool.valid())
@@ -134,12 +164,6 @@ namespace VictorRoutine
 		}
 		ParallelThreadPool* getThreadPool()
 		{
-			if (!m_pool.valid())
-			{
-				m_pool = new ParallelThreadPool;
-				VROUTINE_CHECKER(m_pool != NULL);
-				m_pool->startup();
-			}
 			return m_pool.get();
 		}
 	private:
